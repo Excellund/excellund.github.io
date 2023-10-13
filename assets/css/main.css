@@ -1134,8 +1134,8 @@ body {
     font-size: 44px;
   }
   .about--banner h2::before {
-    top: 28px;
-    left: 168px;
+    top: 60px;
+    left: 120px;
   }
   .about--banner h2::after {
     top: 163px;

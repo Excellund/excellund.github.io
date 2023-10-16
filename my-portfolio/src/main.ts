@@ -1,5 +1,5 @@
 import * as THREE from 'https://unpkg.com/three@0.157.0/build/three.module.js';
-import CameraControl from './CameraControl';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 
 // Setup THREE
 const scene = new THREE.Scene();
@@ -50,14 +50,16 @@ scene.add(light);
 scene.add(light2);
 scene.add(light3);
 
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.maxDistance = 10;
+controls.maxPolarAngle = Math.PI / 2.1;
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+
 // Animation
 function animate() {
   requestAnimationFrame(animate);
+  controls.update();
   renderer.render(scene, camera);
 }
 animate();
-
-// Gain Camera Control
-const cameraControl = new CameraControl(renderer, camera, () => {
-  requestAnimationFrame(() => renderer.render(scene, camera))
-})

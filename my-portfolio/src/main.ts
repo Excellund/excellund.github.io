@@ -2,10 +2,50 @@ import * as THREE from 'https://unpkg.com/three@0.157.0/build/three.module.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { Water } from 'three/addons/objects/Water2.js';
+import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+import {TextGeometry} from 'three/addons/geometries/TextGeometry.js' 
+
+const sceneConfig = {
+  backgroundColor: 0xcce0ff,
+};
+
+const cameraConfig = {
+  fov: 75,
+  near: 0.1,
+  far: 1000,
+};
+
+const gridConfig = {
+  rows: 6,
+  columns: 6,
+  spacingX: 0.86,
+  spacingY: 0.86,
+};
+
+const whiteColor = 0xffffff;
+const lightIntensity = {
+  full: 1,
+  half: 0.5,
+  dimmed: 0.25,
+};
+
+const nameOffset = {
+  initialX: 2.5,
+  initialY: 0.01,
+  initialZ: 2.5,
+};
+
+const duckPath = '../resources/duck.glb';
+const bowlPath = '../resources/bowl.glb';
 
 // Setup THREE
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
+const camera = new THREE.PerspectiveCamera(
+  cameraConfig.fov, 
+  innerWidth / innerHeight, 
+  cameraConfig.near, 
+  cameraConfig.far
+);
 const renderer = new THREE.WebGLRenderer();
 
 // Setup Renderer
@@ -14,83 +54,30 @@ renderer.setPixelRatio(devicePixelRatio);
 renderer.physicallyCorrectLights = true;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.setClearColor(0xcce0ff, 0.5);
+renderer.setClearColor(sceneConfig.backgroundColor, 0.5);
 renderer.gammaInput = true;
 renderer.gammaOutput = true;
 
 // Add Renderer to the body
 document.body.appendChild(renderer.domElement);
 
-// Geometry
-const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
-const planeGeometry = new THREE.PlaneGeometry(5, 5, 10, 10);
-
 // Material
 const greenMaterial = new THREE.MeshPhongMaterial({color: 0x00FF00});
 const greyMaterial = new THREE.MeshPhongMaterial({color: 0x5A5A5A});
 
-// Mesh
-const boxMesh = new THREE.Mesh(boxGeometry, greenMaterial);
-const planeMesh = new THREE.Mesh(planeGeometry, greyMaterial);
-
 // Light
-const light = new THREE.DirectionalLight(0xffffff, 1);
-const light2 = new THREE.DirectionalLight(0xffffff, 0.5);
-const light3 = new THREE.DirectionalLight(0xffffff, 0.25);
+const light = new THREE.DirectionalLight(whiteColor, lightIntensity.full);
+const light2 = new THREE.DirectionalLight(whiteColor, lightIntensity.half);
+const light3 = new THREE.DirectionalLight(whiteColor, lightIntensity.dimmed);
 
-// Define the dimensions of the grid
-const rows = 6;
-const columns = 6;
-
-// Create an empty 6x6 grid
-const grid = [];
-
-// Populate the grid, excluding the corners
-for (let i = 0; i < rows; i++) {
-  const row = [];
-  for (let j = 0; j < columns; j++) {
-    
-    if((i === 0 && j === 0) || (i === 0 && j === columns-1) || (i === rows-1 && j === 0) || (i === rows-1 && j === columns-1)) {
-      row.push(null);
-    } else {
-      row.push(new THREE.PointLight(0x69FFFF, 0.3));
-    }
-  }
-  grid.push(row);
-}
-
-console.log(grid)
-
-// Define the spacing between grid elements
-const spacingX = 0.86; // Adjust this value as needed
-const spacingY = 0.86; // Adjust this value as needed
-
-// Loop through the grid and add non-corner elements to the scene
-for (let i = 0; i < rows; i++) {
-  for (let j = 0; j < columns; j++) {
-    if (grid[i][j] !== null) {
-      const x = (j * spacingX) - 2.145;
-      const y = 0.1;
-      const z = (i * spacingY) - 2.145;
-
-      // Check if the object has a 'position' property before setting it
-      if (grid[i][j].position) {
-        grid[i][j].position.set(x, y, z);
-
-        // Add the object to the scene
-        scene.add(grid[i][j]);
-      }
-    }
-  }
-}
+const grid = generateGridWithoutCorners(gridConfig.rows, gridConfig.columns);
+const lightOffset = 2.145;
+addGridObjectsToScene(grid, scene, gridConfig.spacingX, gridConfig.spacingY, lightOffset);
 
 // Position the Camera
 camera.position.z = 5;
 camera.position.y = 3;
-camera.lookAt(new THREE.Vector3(0,0,0));
-
-// Position the Plane
-planeMesh.rotation.x = -Math.PI / 2;
+camera.lookAt(new THREE.Vector3(0, 0, 0));
 
 // Position the Light
 light.position.set(0, 1, 0);
@@ -99,14 +86,12 @@ light3.position.set(-1, 1, -1);
 
 // skybox
 const cubeTextureLoader = new THREE.CubeTextureLoader();
-cubeTextureLoader.setPath( 'textures/skybox/' );
-
+cubeTextureLoader.setPath( 'textures/skybox-black/' );
 const cubeTexture = cubeTextureLoader.load( [
-  'posx.jpg', 'negx.jpg',
-  'posy.jpg', 'negy.jpg',
-  'posz.jpg', 'negz.jpg'
+  'black.jpg', 'black.jpg',
+  'black.jpg', 'black.jpg',
+  'black.jpg', 'black.jpg'
 ] );
-
 scene.background = cubeTexture;
 
 // Scene Additions
@@ -114,6 +99,7 @@ scene.add(light);
 scene.add(light2);
 scene.add(light3);
 
+// Controls
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.maxDistance = 10;
 controls.minDistance = 3.4;
@@ -121,8 +107,7 @@ controls.maxPolarAngle = Math.PI / 2.1;
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 
-const duckPath = "../resources/duck.glb";
-const bowlPath = "../resources/bowl.glb";
+// Models
 const LoadGLTF = (scene, path, x, y, z, xRot, yRot, zRot, scale) => {
   return new Promise<void>((resolve, reject) => {
     // Create a loader
@@ -173,6 +158,89 @@ water.position.y = 1;
 water.rotation.x = Math.PI * - 0.5;
 scene.add( water );
 
+// Text
+const loader = new FontLoader();
+const robotoLightPath = '../fonts/Roboto-Light-Regular.json';
+const robotoMediumPath = '../fonts/Roboto-Medium-Regular.json';
+
+loader.load(robotoMediumPath, function (font) {
+  try {
+    const nameParameters = {
+      font: font,
+      size: 0.2,
+      height: 0.001,
+      curveSegments: 10,
+      bevelEnabled: false,
+      bevelOffset: 0,
+      bevelSegments: 1,
+      bevelSize: 0.3,
+      bevelThickness: 1
+    }
+
+    const nameGeometry = new TextGeometry('Mike Lund Andersen', nameParameters);
+
+    const textMaterials = [
+      new THREE.MeshPhongMaterial({ color: 0xffffff }), // front
+      new THREE.MeshPhongMaterial({ color: 0xffffff }) // side
+    ];
+
+    const nameMesh = new THREE.Mesh(nameGeometry, textMaterials);
+    nameMesh.castShadow = true;
+    nameMesh.position.set(nameOffset.initialX, nameOffset.initialY, nameOffset.initialZ); // Use .set() for setting position
+    nameMesh.rotation.set(-Math.PI / 2, 0, 0); // Use .set() for setting rotation
+
+    scene.add(nameMesh);
+  } catch (error) {
+    console.error("An error occurred while creating 3D text:", error);
+  }
+});
+
+loader.load(robotoLightPath, function (font) {
+  try {
+    const titleParameters = {
+      font: font,
+      size: 0.16,
+      height: 0.001,
+      curveSegments: 10,
+      bevelEnabled: false,
+      bevelOffset: 0,
+      bevelSegments: 1,
+      bevelSize: 0.3,
+      bevelThickness: 1
+    }
+
+    // Instantiate Text Geometries
+    const titleGeometries = [
+      new TextGeometry('Software Consultant', titleParameters),
+      new TextGeometry('Data Scientist', titleParameters),
+      new TextGeometry('Game Developer', titleParameters),
+      new TextGeometry('3D Artist', titleParameters),
+    ];
+
+    // All Text Materials
+    const textMaterials = [
+      new THREE.MeshPhongMaterial({ color: 0xffffff }), // front
+      new THREE.MeshPhongMaterial({ color: 0xffffff }) // side
+    ];
+
+    // Instantiate Title Meshes
+    const titleMeshes: any[] = [];
+    titleGeometries.forEach(function (geometry) {
+      titleMeshes.push(new THREE.Mesh(geometry, textMaterials));
+    });
+
+    // Setup Titles Text
+    titleMeshes.forEach(function (mesh, index) {
+      mesh.castShadow = true;
+      mesh.position.set(nameOffset.initialX, nameOffset.initialY, nameOffset.initialZ + 0.3 * (index + 1));
+      mesh.rotation.set(-Math.PI / 2, 0, 0);
+      scene.add(mesh);
+    });
+  } catch (error) {
+    console.error("An error occurred while creating 3D text:", error);
+  }
+});
+
 // Animation
 function animate() {
   requestAnimationFrame(animate);
@@ -180,3 +248,44 @@ function animate() {
   renderer.render(scene, camera);
 }
 animate();
+
+// Function to generate a grid of objects without corner elements
+function generateGridWithoutCorners(rows, columns) {
+  const grid = []; // Create an empty grid to store objects
+
+  for (let i = 0; i < rows; i++) { // Loop through rows
+    const row = []; // Create a row to hold objects in this row
+    for (let j = 0; j < columns; j++) { // Loop through columns
+      // Check if the current position is a corner (top-left, top-right, bottom-left, or bottom-right)
+      const isCorner = (i === 0 || i === rows - 1) && (j === 0 || j === columns - 1);
+
+      if (isCorner) {
+        row.push(null); // If it's a corner, add null to the row (no object)
+      } else {
+        // If it's not a corner, add a PointLight object to the row with specified color and intensity
+        row.push(new THREE.PointLight(0x69FFFF, 0.3));
+      }
+    }
+    grid.push(row); // Add the row to the grid
+  }
+
+  return grid; // Return the generated grid
+}
+
+// Function to add grid objects to the scene
+function addGridObjectsToScene(grid, scene, spacingX, spacingY, offset) {
+  grid.forEach((row, i) => { // Loop through rows in the grid
+    row.forEach((obj, j) => { // Loop through objects in each row
+      if (obj !== null && obj.position) { // Check if the object exists and has a position property
+        // Calculate the position of the object based on its row and column index
+        const x = (j * spacingX) - offset;
+        const y = 0.1;
+        const z = (i * spacingY) - offset;
+
+        // Set the position of the object and add it to the scene
+        obj.position.set(x, y, z);
+        scene.add(obj);
+      }
+   });
+  })
+}

@@ -1,5 +1,6 @@
 import * as THREE from 'https://unpkg.com/three@0.157.0/build/three.module.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 // Setup THREE
 const scene = new THREE.Scene();
@@ -55,6 +56,30 @@ controls.maxDistance = 10;
 controls.maxPolarAngle = Math.PI / 2.1;
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
+
+const duckPath = "../resources/duck.glb";
+const LoadGLTFByPath = (scene) => {
+  return new Promise<void>((resolve, reject) => {
+    // Create a loader
+    const loader = new GLTFLoader();
+
+    // Load the GLTF file
+    loader.load(duckPath, (gltf) => {
+
+      var newMaterial = new THREE.MeshStandardMaterial({color: 0xFDDA0D});
+      gltf.scene.traverse((o) => {
+        if (o.isMesh) o.material = newMaterial;
+      });
+
+      scene.add(gltf.scene);
+
+      resolve();
+    }, undefined, (error) => {
+      reject(error);
+    });
+  });
+}
+LoadGLTFByPath(scene)
 
 // Animation
 function animate() {

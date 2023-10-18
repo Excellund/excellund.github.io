@@ -35,8 +35,23 @@ const nameOffset = {
   initialZ: 2.5,
 };
 
+const materialHexColors = [
+  "#000000",
+  "#744B1F",
+  "#46C098",
+  "#000000",
+  "#256B32",
+  "#256B32",
+  "#9E9E9E",
+  "#9E9E9E",
+  "#9E9E9E"
+];
+
 const duckPath = '../resources/duck.glb';
 const bowlPath = '../resources/bowl.glb';
+const pondPath = '../resources/pond.glb';
+
+let tooLazyToHandleLoadingProperly = 0;
 
 // Setup THREE
 const scene = new THREE.Scene();
@@ -70,9 +85,9 @@ const light = new THREE.DirectionalLight(whiteColor, lightIntensity.full);
 const light2 = new THREE.DirectionalLight(whiteColor, lightIntensity.half);
 const light3 = new THREE.DirectionalLight(whiteColor, lightIntensity.dimmed);
 
-const grid = generateGridWithoutCorners(gridConfig.rows, gridConfig.columns);
+/* const grid = generateGridWithoutCorners(gridConfig.rows, gridConfig.columns);
 const lightOffset = 2.145;
-addGridObjectsToScene(grid, scene, gridConfig.spacingX, gridConfig.spacingY, lightOffset);
+addGridObjectsToScene(grid, scene, gridConfig.spacingX, gridConfig.spacingY, lightOffset); */
 
 // Position the Camera
 camera.position.z = 5;
@@ -108,13 +123,75 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 
 // Models
+let model;
 const LoadGLTF = (scene, path, x, y, z, xRot, yRot, zRot, scale) => {
   return new Promise<void>((resolve, reject) => {
     // Create a loader
     const loader = new GLTFLoader();
 
     // Load the GLTF file
+    
     loader.load(path, (gltf) => {
+      model = gltf.scene;
+      const colors = new Uint8Array(5);
+
+					for ( let c = 0; c <= colors.length; c ++ ) {
+
+						colors[ c ] = ( c / colors.length ) * 256;
+
+					}
+      const gradientMap = new THREE.DataTexture( colors, colors.length, 1, ( renderer.capabilities.isWebGL2 ) ? THREE.RedFormat : THREE.LuminanceFormat);
+			gradientMap.needsUpdate = true;
+      let nodeCount = 0;
+
+      gltf.scene.traverse((node: any) => {
+          let material = new THREE.MeshToonMaterial({
+            gradientMap: gradientMap,
+            color: materialHexColors[nodeCount],
+          });
+          if(nodeCount === 2) {
+            const loadingLol = () => tooLazyToHandleLoadingProperly++;
+            const ENV_URL = 'textures/skybox-black/black.jpg'
+            const reflectionCube = new THREE.TextureLoader().load(ENV_URL, loadingLol)
+            const refractionCube = new THREE.TextureLoader().load(ENV_URL, loadingLol)
+            reflectionCube.mapping = THREE.EquirectangularReflectionMapping;
+            refractionCube.mapping = THREE.EquirectangularReflectionMapping;
+            scene.background = reflectionCube;
+            scene.environment = reflectionCube;
+
+            const refractionMaterial = new THREE.MeshPhysicalMaterial({
+              color: 0xc3e4f9,
+              envMap: refractionCube,
+              metalness: 1,
+              reflectivity: 0,
+              refractionRatio: .1,
+              roughness: 0,
+              side: THREE.DoubleSide
+            });
+
+            const reflectionMaterial = new THREE.MeshPhysicalMaterial({
+              color: 0xc3e4f9,
+              envMap: reflectionCube,
+              envMapIntensity: 1,
+              metalness: .35,
+              reflectivity: .9,
+              roughness: 0,
+              side: THREE.DoubleSide,
+              transmission: 1,
+              transparent: true
+            });
+
+            const refractionMesh = new THREE.Mesh(node.geometry, refractionMaterial)
+            const reflectionMesh = new THREE.Mesh(node.geometry, reflectionMaterial)
+            const water = new THREE.Object3D();
+            water.add(refractionMesh);
+            water.add(reflectionMesh);
+            
+          } else {
+            node.material = material;
+          }
+          nodeCount++;
+      });
 
       gltf.scene.position.x += x;
       gltf.scene.position.y += y;
@@ -131,13 +208,14 @@ const LoadGLTF = (scene, path, x, y, z, xRot, yRot, zRot, scale) => {
     });
   });
 }
-LoadGLTF(scene, duckPath, 1, 0.9, 1, 0, Math.PI / 3, 0, 0.3)
+/* LoadGLTF(scene, duckPath, 1, 0.9, 1, 0, Math.PI / 3, 0, 0.3)
 LoadGLTF(scene, duckPath, 1, 0.9, -1.5, 0, Math.PI * 1.8, 0, 0.3)
 LoadGLTF(scene, duckPath, -1.5, 0.9, -1.5, 0, Math.PI / 4, 0, 0.3)
-LoadGLTF(scene, bowlPath, 0, 0, 0, 0, 0, 0, 1)
+LoadGLTF(scene, bowlPath, 0, 0, 0, 0, 0, 0, 1) */
+LoadGLTF(scene, pondPath, 0, 0, 0, 0, 0, 0, 1)
 
 // Water
-const params = {
+/* const params = {
   color: '#ffffff',
   scale: 4,
   flowX: 1,
@@ -156,7 +234,7 @@ let water = new Water( waterGeometry, {
 
 water.position.y = 1;
 water.rotation.x = Math.PI * - 0.5;
-scene.add( water );
+scene.add( water ); */
 
 // Text
 const loader = new FontLoader();
@@ -246,6 +324,12 @@ function animate() {
   requestAnimationFrame(animate);
   controls.update();
   renderer.render(scene, camera);
+  if (tooLazyToHandleLoadingProperly !== 2) return;
+
+  model.children[2].geometry.attributes.position.array.forEach((val, i, arr)) => {
+    const place = i % 3;
+
+  });
 }
 animate();
 

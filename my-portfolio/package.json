@@ -10,9 +10,10 @@
   },
   "devDependencies": {
     "typescript": "^5.0.2",
-    "vite": "^4.4.5"
+    "vite": "^4.5.0"
   },
   "dependencies": {
+    "three": "^0.158.0",
     "three-orbit-controls": "^82.1.0",
     "three-orbitcontrols": "^2.110.3"
   }

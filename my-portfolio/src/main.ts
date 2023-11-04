@@ -325,11 +325,6 @@ function animate() {
   controls.update();
   renderer.render(scene, camera);
   if (tooLazyToHandleLoadingProperly !== 2) return;
-
-  model.children[2].geometry.attributes.position.array.forEach((val, i, arr)) => {
-    const place = i % 3;
-
-  });
 }
 animate();
 
